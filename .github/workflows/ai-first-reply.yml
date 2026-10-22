@@ -10,6 +10,8 @@ permissions:
   contents: read
   issues: write
   pull-requests: write
+  # Lets GITHUB_TOKEN call GitHub Models (free tier, no API key needed)
+  models: read
 
 jobs:
   reply:
@@ -20,15 +22,10 @@ jobs:
       - name: Generate and post a first reply
         uses: actions/github-script@v7
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
+          GITHUB_TOKEN: ${{ github.token }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'openai/gpt-4o-mini' }}
         with:
           script: |
-            if (!process.env.OPENAI_API_KEY) {
-              core.warning('OPENAI_API_KEY is not set. Skipping the first reply.');
-              return;
-            }
-
             const isPR = !!context.payload.pull_request;
             const item = isPR ? context.payload.pull_request : context.payload.issue;
             const kind = isPR ? 'Pull Request' : 'Issue';
@@ -50,19 +47,19 @@ jobs:
               body || '(empty)'
             ].join('\n');
 
-            const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            const res = await fetch('https://models.github.ai/inference/chat/completions', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+                Authorization: `Bearer ${process.env.GITHUB_TOKEN}`
               },
               body: JSON.stringify({
-                model: process.env.OPENAI_MODEL,
+                model: process.env.AI_MODEL,
                 messages: [{ role: 'user', content: prompt }]
               })
             });
             if (!res.ok) {
-              throw new Error(`OpenAI API error: ${res.status} ${await res.text()}`);
+              throw new Error(`GitHub Models API error: ${res.status} ${await res.text()}`);
             }
             const data = await res.json();
             const reply = data.choices[0].message.content.trim();
