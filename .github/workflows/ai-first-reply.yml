@@ -1,4 +1,4 @@
-name: AI First Reply
+name: First Reply
 
 on:
   issues:
@@ -7,11 +7,8 @@ on:
     types: [opened]
 
 permissions:
-  contents: read
   issues: write
   pull-requests: write
-  # Lets GITHUB_TOKEN call GitHub Models (free tier, no API key needed)
-  models: read
 
 jobs:
   reply:
@@ -19,55 +16,52 @@ jobs:
     if: github.event.sender.type != 'Bot'
     runs-on: ubuntu-latest
     steps:
-      - name: Generate and post a first reply
+      - name: Post a template first reply
         uses: actions/github-script@v7
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          AI_MODEL: ${{ vars.AI_MODEL || 'openai/gpt-4o-mini' }}
         with:
           script: |
             const isPR = !!context.payload.pull_request;
             const item = isPR ? context.payload.pull_request : context.payload.issue;
-            const kind = isPR ? 'Pull Request' : 'Issue';
-            const body = (item.body || '').slice(0, 4000);
+            const text = `${item.title || ''}\n${item.body || ''}`;
 
-            const prompt = [
-              `You are the maintainer's assistant for the GitHub repository "${context.repo.owner}/${context.repo.repo}".`,
-              `Write a short, polite first reply to the ${kind} below.`,
-              'Thank the author and mention the specific content they wrote.',
-              'For a bug report: thank them and ask for any missing reproduction steps or environment details.',
-              'For a question or feature request: answer briefly if you can; otherwise say the maintainer will follow up.',
-              'For a pull request: thank them for the contribution and say the maintainer will review it.',
-              'Do not promise a merge, a release, or a deadline.',
-              'Reply in the same language the author used (Japanese, Korean, or English).',
-              'Keep it under 12 lines.',
-              '',
-              `Title: ${item.title || ''}`,
-              'Body:',
-              body || '(empty)'
-            ].join('\n');
+            // Detect the author's language from the text (no API needed).
+            const lang = /[぀-ヿ一-鿿]/.test(text) ? 'ja'
+              : /[가-힯]/.test(text) ? 'ko'
+              : 'en';
 
-            const res = await fetch('https://models.github.ai/inference/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${process.env.GITHUB_TOKEN}`
+            // Pick a template by the kind of item.
+            const kind = isPR ? 'pr'
+              : /bug|error|crash|fail|バグ|エラー|不具合|오류|버그|실패/i.test(text) ? 'bug'
+              : /\?|？|質問|どう|질문|어떻게|how|why|what/i.test(text) ? 'question'
+              : 'general';
+
+            const messages = {
+              ja: {
+                pr: 'プルリクエスト「{title}」をありがとうございます！担当者が内容を確認し、後ほどレビューします。',
+                bug: '「{title}」のご報告ありがとうございます。再現手順・環境（OS、ブラウザなど）・期待する動作を教えていただけると、確認がスムーズです。担当者が後ほど対応します。',
+                question: 'ご質問ありがとうございます。「{title}」について、担当者が後ほど回答します。',
+                general: '「{title}」についてのご連絡ありがとうございます。内容を確認し、担当者が後ほど返信します。'
               },
-              body: JSON.stringify({
-                model: process.env.AI_MODEL,
-                messages: [{ role: 'user', content: prompt }]
-              })
-            });
-            if (!res.ok) {
-              throw new Error(`GitHub Models API error: ${res.status} ${await res.text()}`);
-            }
-            const data = await res.json();
-            const reply = data.choices[0].message.content.trim();
+              ko: {
+                pr: 'Pull Request "{title}" 감사합니다! 담당자가 내용을 확인한 후 리뷰하겠습니다.',
+                bug: '"{title}" 보고 감사합니다. 재현 절차, 환경(OS, 브라우저 등), 기대하는 동작을 알려주시면 확인이 수월합니다. 담당자가 나중에 대응하겠습니다.',
+                question: '질문 감사합니다. "{title}"에 대해 담당자가 나중에 답변하겠습니다.',
+                general: '"{title}" 관련 연락 감사합니다. 내용을 확인한 후 담당자가 나중에 답변하겠습니다.'
+              },
+              en: {
+                pr: 'Thank you for the pull request "{title}"! The maintainer will review it soon.',
+                bug: 'Thank you for reporting "{title}". To help us reproduce it, please share the steps, your environment (OS, browser, etc.), and the expected behavior. The maintainer will follow up.',
+                question: 'Thank you for your question about "{title}". The maintainer will get back to you soon.',
+                general: 'Thank you for reaching out about "{title}". The maintainer will review it and reply soon.'
+              }
+            };
+
+            const reply = messages[lang][kind].replace('{title}', item.title || '');
 
             // A PR is also an issue for the comments API, so one call covers both.
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: item.number,
-              body: `${reply}\n\n---\n*This first reply was generated automatically. The maintainer will follow up.*`
+              body: `${reply}\n\n---\n*This first reply was posted automatically. The maintainer will follow up.*`
             });
