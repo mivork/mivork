@@ -1,0 +1,71 @@
+name: AI First Reply
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  reply:
+    # Skip bot-authored events (including this workflow's own comments) to avoid loops.
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate and post a first reply
+        uses: actions/github-script@v7
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
+        with:
+          script: |
+            const isPR = !!context.payload.pull_request;
+            const item = isPR ? context.payload.pull_request : context.payload.issue;
+            const kind = isPR ? 'Pull Request' : 'Issue';
+            const body = (item.body || '').slice(0, 4000);
+
+            const prompt = [
+              `You are the maintainer's assistant for the GitHub repository "${context.repo.owner}/${context.repo.repo}".`,
+              `Write a short, polite first reply to the ${kind} below.`,
+              'Thank the author and mention the specific content they wrote.',
+              'For a bug report: thank them and ask for any missing reproduction steps or environment details.',
+              'For a question or feature request: answer briefly if you can; otherwise say the maintainer will follow up.',
+              'For a pull request: thank them for the contribution and say the maintainer will review it.',
+              'Do not promise a merge, a release, or a deadline.',
+              'Reply in the same language the author used (Japanese, Korean, or English).',
+              'Keep it under 12 lines.',
+              '',
+              `Title: ${item.title || ''}`,
+              'Body:',
+              body || '(empty)'
+            ].join('\n');
+
+            const res = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+              },
+              body: JSON.stringify({
+                model: process.env.OPENAI_MODEL,
+                messages: [{ role: 'user', content: prompt }]
+              })
+            });
+            if (!res.ok) {
+              throw new Error(`OpenAI API error: ${res.status} ${await res.text()}`);
+            }
+            const data = await res.json();
+            const reply = data.choices[0].message.content.trim();
+
+            // A PR is also an issue for the comments API, so one call covers both.
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: item.number,
+              body: `${reply}\n\n---\n*This first reply was generated automatically. The maintainer will follow up.*`
+            });
