@@ -20,19 +20,18 @@
 
 ## Issue / PR
 
-- Issue や PR を開くと、内容に応じた一次返信が自動で付きます。これは AI が生成したもので、担当者が後ほど確認します。
+- Issue や PR を開くと、種類（バグ報告・質問・PR など）と言語に応じた一次返信が自動で付きます。担当者が後ほど対応します。
 - 返信内容が不正確な場合は、遠慮なくコメントしてください。
 
 ## Automation
 
 | Workflow | 内容 |
 | --- | --- |
-| `ai-first-reply.yml` | Issue / PR 作成時に GitHub Models で一次返信を投稿 |
+| `ai-first-reply.yml` | Issue / PR 作成時に定型文で一次返信を投稿（API 不要・無料） |
 | `daily-commit.yml` | 1日5回（JST 09:00 / 14:00 / 19:00 / 00:00 / 05:00）にアクティビティを記録 |
 
 リポジトリの Secrets に以下を設定してください。
 
 - `GIT_AUTHOR_EMAIL` … 自動コミットの作成者メール（GitHub アカウントに紐づくもの）
 
-一次返信は GitHub Models の無料枠を使い、API キーは不要です（レート制限あり）。
-任意の Variable `AI_MODEL` を設定するとモデルを変更できます（未設定時は `openai/gpt-4o-mini`）。
+一次返信は Issue / PR の種類と言語を判定して定型文を返すため、API キーは不要です。
