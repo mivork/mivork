@@ -1,37 +1,39 @@
 # Contributing
 
-このリポジトリは mivork のプロフィールです。共同開発者を歓迎します。
+*Languages: [English](CONTRIBUTING.md) · [日本語](CONTRIBUTING.ja.md) · [한국어](CONTRIBUTING.ko.md)*
+
+This repository is the profile of mivork. Collaborators are welcome.
 
 ## Collaborators
 
-- 共同開発者は GitHub の **Settings → Collaborators** から招待されます。
-- 招待された人は、Issue・PR・コミットを通じて変更を提案できます。
+- Collaborators are invited from **Settings → Collaborators** on GitHub.
+- Invited collaborators can propose changes through Issues, PRs, and commits.
 
 ## Commit rules
 
-- コミットメッセージは [Conventional Commits](https://www.conventionalcommits.org/) 形式（例: `docs:`, `ci:`, `chore:`）にします。
-- AI 支援で書いたコミットには、以下の Co-author 行を付けます。
+- Write commit messages in [Conventional Commits](https://www.conventionalcommits.org/) format (for example `docs:`, `ci:`, `chore:`).
+- For commits written with AI assistance, add this co-author line:
 
   ```text
   Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>
   ```
 
-- `main` へ直接 push せず、ブランチを切って PR を出してください。
+- Do not push directly to `main`. Create a branch and open a PR.
 
-## Issue / PR
+## Issues and PRs
 
-- Issue や PR を開くと、種類（バグ報告・質問・PR など）と言語に応じた一次返信が自動で付きます。担当者が後ほど対応します。
-- 返信内容が不正確な場合は、遠慮なくコメントしてください。
+- When you open an Issue or PR, an automatic first reply is posted based on its type and language. The maintainer will follow up later.
+- If a reply seems inaccurate, feel free to comment.
 
 ## Automation
 
-| Workflow | 内容 |
+| Workflow | Description |
 | --- | --- |
-| `ai-first-reply.yml` | Issue / PR 作成時に定型文で一次返信を投稿（API 不要・無料） |
-| `daily-commit.yml` | 1日5回（JST 09:00 / 14:00 / 19:00 / 00:00 / 05:00）にアクティビティを記録 |
+| `ai-first-reply.yml` | Posts a template first reply when an Issue or PR is opened (no API, free) |
+| `daily-commit.yml` | Records activity 5 times a day (09:00, 14:00, 19:00, 00:00, 05:00 JST) |
 
-リポジトリの Secrets に以下を設定してください。
+Set the following repository secret:
 
-- `GIT_AUTHOR_EMAIL` … 自動コミットの作成者メール（GitHub アカウントに紐づくもの）
+- `GIT_AUTHOR_EMAIL`: the author email for automatic commits (must be linked to your GitHub account)
 
-一次返信は Issue / PR の種類と言語を判定して定型文を返すため、API キーは不要です。
+The first reply detects the item type and language and returns a template, so no API key is needed.
