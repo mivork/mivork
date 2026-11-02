@@ -14,6 +14,11 @@
 Gender: Male<br>
 From: Japan
 
+### Projects
+
+- [hal-kindergarten-portfolio](https://github.com/mivork/hal-kindergarten-portfolio) — portfolio site built around a fictional kindergarten
+- [breakout-python](https://github.com/mivork/breakout-python) — Block Breaker written in Python
+
 ---
 
 If you find this profile useful, please follow me on GitHub: **[@mivork](https://github.com/mivork)**
